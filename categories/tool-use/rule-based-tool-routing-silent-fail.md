@@ -8,23 +8,55 @@ tags: [tool-use, agent-orchestration, hallucination]
 
 ## What happened
 
-Used keyword-matching rules to decide which tool to call. The hit rate was too low — users phrase the same intent in countless ways, and rules can never cover them all. When no keyword matched, the router silently skipped tool calling entirely. The LLM had no idea a tool should have been used, so it hallucinated an answer instead of saying "I don't know" or calling the right tool.
+Had a Google Places API integration for location queries (shops, restaurants, nearby places). But the model never knew it existed — there was only one exposed tool (`web_search`) with a keyword router sitting behind it that silently dispatched to different backends.
 
-The worst part: it was a **silent failure**. No error, no log, no fallback — just confidently wrong answers.
+The keyword list for Places routing included things like "restaurant", "cafe", "hotel" — but missed everyday terms like "supermarket", "FairPrice", "near me", "nearby". Every query that didn't hit a keyword fell through to web search. The model had no idea a Places tool even existed, so it couldn't choose it.
+
+Result: **all location queries got garbage web search results** instead of structured Places API data. The model then worked with those garbage results — confidently recommending places with wrong addresses, missing hours, no ratings. A silent failure that looked like it was working.
 
 ## Root cause
 
-Assumed user queries could be bucketed by keywords. They can't. Natural language is too varied. Rule-based routing is brittle by nature — every new edge case demands a new rule, and you're always playing catch-up.
+The architecture hid tools behind a keyword router instead of exposing them directly to the model. Two compounding problems:
 
-The deeper mistake: treating tool selection as a deterministic classification problem instead of a reasoning problem.
+1. **Keyword hit rate is inherently too low.** Natural language is too varied — users say "where can I buy groceries", "any supermarket around", "FairPrice near Tampines", none of which matched the keyword list. Every edge case demands a new rule, and you're permanently behind.
+
+2. **The model couldn't reason about tool selection because it didn't know the tools existed.** It saw one tool (`web_search`) and used it for everything. The routing logic was invisible to the LLM — a black box doing bad classification that the model couldn't correct or override.
+
+The deeper mistake: treating tool selection as a deterministic classification problem instead of a reasoning problem. The LLM is better at understanding intent than any keyword list.
 
 ## Fix / Lesson
 
-Switched to **LLM-driven tool selection**. All tools are registered with clear descriptions in a tools registry. The model reads the descriptions and decides which tool to call based on the user's intent — no hardcoded keyword matching.
+Ripped out the keyword router entirely. Split into two independent tools with clear descriptions:
+
+```
+# Before — one tool, hidden router
+tools = [
+    {
+        "name": "web_search",
+        "description": "Search the web"
+        # keyword router silently dispatches behind the scenes
+    }
+]
+
+# After — two tools, model decides
+tools = [
+    {
+        "name": "search_places",
+        "description": "Search for nearby places, shops, restaurants, supermarkets, or any physical location. Returns structured info: name, address, rating, reviews, price range, opening hours, Google Maps link. Use this for any query about finding or recommending a physical place."
+    },
+    {
+        "name": "web_search",
+        "description": "Search the web for general information, news, articles, how-to guides, or anything not about finding a specific physical place."
+    }
+]
+```
+
+The model immediately started routing correctly — "FairPrice near me" goes to `search_places`, "how to cook laksa" goes to `web_search`. Zero keyword maintenance.
 
 Key takeaways:
 
-- **Let the LLM reason about tool selection** — that's what it's good at. You already trust it to generate responses; trust it to pick tools too.
-- **Every tool needs a good description** — the description IS the routing logic now. Invest time writing clear, specific tool descriptions with usage examples.
-- **Silent failures are worse than loud errors** — if a tool router falls through with no match, it should at minimum log a warning, not silently proceed without tools.
-- **Rule-based routing doesn't scale** — it works for 3 tools with distinct keywords, it breaks at 10+ tools with overlapping domains.
+- **Never hide tools behind a router the model can't see.** If the model doesn't know a tool exists, it can't use it. Expose every tool directly with a clear description.
+- **Tool descriptions ARE the routing logic.** Invest time writing specific, example-rich descriptions — the model uses them to decide. A good description replaces hundreds of keyword rules.
+- **Keyword routers fail silently at scale.** They work for a demo with 3 perfect queries. They break in production where users phrase things in ways you never anticipated.
+- **Silent fallback is the worst failure mode.** When the router fell through to web search, there was no error, no log — just degraded quality that looks like the system is working. At minimum, log when routing falls through to a default.
+- **Split tools by domain, not by implementation.** The original sin was wrapping two completely different backends (Places API, web search) in one tool. Different data sources = different tools.
