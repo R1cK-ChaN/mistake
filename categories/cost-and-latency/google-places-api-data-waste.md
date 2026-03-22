@@ -1,7 +1,7 @@
 ---
 date: 2026-03-22
 severity: medium
-tags: [cost-and-latency, tool-use, vibe-coding]
+tags: [cost-and-latency, tool-use]
 ---
 
 # Paying for Advanced tier API but only using 5 fields

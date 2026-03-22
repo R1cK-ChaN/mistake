@@ -1,6 +1,6 @@
 # Mistake Handbook
 
-A personal engineering handbook collecting real mistakes from building AI agents — lessons for the vibe coding era.
+A personal engineering handbook for the vibe coding era. Every mistake here came from AI-generated code — I don't write a single line by hand. The role is agent engineer: designing, reviewing, and directing, not typing. The mistakes are about what happens when you trust the output without sufficient review.
 
 ## How to add an entry
 
