@@ -80,23 +80,26 @@ field_mask = (
 # Before — raw JSON dict, agent ignores most fields
 return json.dumps(place_data)
 
-# After — structured text, every field used in response
-def format_place(place: dict) -> str:
-    price = place.get('priceRange') or place.get('priceLevel', 'N/A')
-    return (
-        f"{place['displayName']}\n"
-        f"地址: {place['formattedAddress']}\n"
-        f"评分: {place['rating']} ({place.get('userRatingCount', '?')}条评价)\n"
-        f"人均: {price}\n"
-        f"营业时间: {format_hours(place.get('currentOpeningHours'))}\n"
-        f"网站: {place.get('websiteUri', 'N/A')}\n"
-        f"地图: {place.get('googleMapsUri', 'N/A')}"
-    )
+# After — structured dict with clear keys, serialized readably
+def format_place(place: dict) -> dict:
+    return {
+        "name": place["displayName"],
+        "address": place["formattedAddress"],
+        "rating": place.get("rating"),
+        "review_count": place.get("userRatingCount"),
+        "price_range": place.get("priceRange"),
+        "price_level": place.get("priceLevel"),
+        "opening_hours": format_hours(place.get("currentOpeningHours")),
+        "website": place.get("websiteUri"),
+        "maps_url": place.get("googleMapsUri"),
+        "summary": place.get("editorialSummary"),
+    }
+# serialize with: json.dumps(result, ensure_ascii=False)
 ```
 
 ### Takeaways
 
 - **After any API integration, open the pricing page and diff available fields against your field mask.** If you're paying for a tier, use every field in that tier. This is a 5-minute audit that prevents ongoing waste.
 - **Test agent output from the user's perspective, not the developer's.** "Does this response let the user take action without leaving the chat?" If not, you're missing fields.
-- **Structure tool output as formatted text, not raw JSON.** Raw JSON wastes context tokens and agents routinely skip fields. Pre-formatted text ensures every field shows up in the response.
+- **Return structured dicts, not raw JSON dumps or pre-formatted text.** Raw JSON dumps lose readability; pre-formatted text strings bury URLs and make field extraction fragile. Structured dicts with clear keys + `json.dumps(ensure_ascii=False)` is the right balance. (See: `tool-use/tool-output-text-vs-structured-dict.md`)
 - **AI-generated API integrations need a "completeness review".** The LLM stops at "it works". Your job is to check "does it use everything available and relevant?"
