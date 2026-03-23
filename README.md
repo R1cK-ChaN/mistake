@@ -22,6 +22,14 @@ A personal engineering handbook for the vibe coding era. Every mistake here came
 | `cost-and-latency` | Token usage, caching, batching, model selection |
 | `deployment` | Infra, API keys, rate limits, versioning, monitoring |
 
+## Playbook
+
+Beyond individual mistakes, the `playbook/` folder captures **best practices** — workflows and principles distilled from the patterns in this handbook.
+
+| File | Covers |
+|---|---|
+| `vibe-coding-best-practices.md` | End-to-end workflow: research → bottom-up build → deterministic-first → validate → log |
+
 ## Conventions
 
 - One mistake per file
