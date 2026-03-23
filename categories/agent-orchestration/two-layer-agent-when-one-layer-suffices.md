@@ -20,11 +20,19 @@ Three problems killed it:
 
 ## Root cause
 
-Applied agent architecture where the problem didn't need it. The runtime layer's job — monitor price, check conditions, execute action — is fundamentally deterministic. It doesn't require reasoning, creativity, or natural language understanding. It requires `if price < threshold: sell`. Using an LLM for this is like hiring a translator to copy text between two documents in the same language.
+Jumped to multi-agent architecture before doing the context engineering work that would make *any* LLM layer effective. The two-layer design wasn't just the wrong shape — it was premature complexity built on a weak foundation.
 
-The deeper mistake: assuming that "more agent = more capable." A two-layer agent architecture is justified when both layers genuinely need reasoning (e.g., a planning agent that decomposes ambiguous goals + an execution agent that navigates unpredictable environments). When one layer's job is mechanical, that layer should be code, not an agent.
+LLMs are genuinely capable of decision-making — but like human decision-makers, they need **reliable information sources and bounded scope** to decide well. Without curated inputs, an LLM doesn't fail by refusing to decide — it fails by confidently deciding on garbage, and you can't tell the difference from the outside. The runtime agent was making trading decisions on raw, unbounded market context with no information curation. Adding a second agent layer before solving the context problem just doubled the surface area for bad decisions.
 
-Additionally, the vibe-coding approach masked architectural problems. The system reached a "running" state quickly, but without structured logging, the silent failures in inter-layer communication were invisible until they caused real damage.
+The compounding mistakes:
+
+1. **Premature architecture before context engineering.** Never got the information pipeline right (what data, how much, how reliable) before wiring up the agents. The runtime agent received noisy, unbounded context and made noisy, unreliable decisions. No amount of architectural elegance fixes bad inputs.
+
+2. **The runtime layer's job was fundamentally deterministic.** Monitor price, check conditions, execute action — this requires `if price < threshold: sell`, not reasoning. Using an LLM for this adds cost and non-determinism to tasks that need neither.
+
+3. **"More agent = more capable" is wrong.** A two-layer agent architecture is justified when both layers genuinely need reasoning over novel situations. When one layer's job is mechanical, that layer should be code, not an agent.
+
+4. **Vibe coding masked the architectural problems.** The system reached a "running" state quickly, but without structured logging, the silent failures in inter-layer communication were invisible until they caused real damage.
 
 ## Fix / Lesson
 
@@ -50,4 +58,6 @@ Takeaways:
 - **High-frequency agent invocation is economically unsustainable.** An agent called every 30 seconds consumes tokens proportional to time, not to useful work. Most invocations will conclude "nothing to do" — paying full LLM cost for a null decision.
 - **Two-layer agent has an autonomy paradox.** If the inner agent has real freedom, the outer agent's configuration is theater. If it doesn't, replace it with code. The architecture only makes sense when both layers genuinely need to reason about novel situations.
 - **Vibe coding hides architectural mistakes.** Getting a multi-agent system to "run" is easy. Getting it to run *correctly* requires structured logging across every layer boundary. Add comprehensive logging before you add complexity — you'll need it to discover that the complexity was unnecessary.
+- **Do context engineering before architecture engineering.** An LLM making decisions needs reliable info sources and bounded scope — same as a human. If you haven't solved what information the agent sees and how much, adding more agent layers just multiplies the garbage-in-garbage-out problem.
+- **An LLM without curated inputs becomes the bottleneck, not the boost.** It won't refuse to decide — it'll decide confidently on bad data. That's worse than no agent at all, because it looks like it's working.
 - **Start with the simplest architecture that could work, then add agent layers only when deterministic code demonstrably fails.** One agent + rules is easier to build, cheaper to run, and far easier to debug than two agents talking to each other.
