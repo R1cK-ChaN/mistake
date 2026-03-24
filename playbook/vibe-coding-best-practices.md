@@ -40,7 +40,13 @@ At each level:
 - **Update docs after every feature/component.** This is doc-oriented programming. When the coding agent's context explodes or gets truncated, the docs are what keep the next session coherent.
 - **Commit working state frequently.** Every completed unit is a checkpoint you can return to.
 
-**Why this matters:** Coding agents are confident and fast. They'll happily scaffold an entire architecture that looks impressive and fails in subtle ways. Building unit by unit forces verification at each step. Slower to start, dramatically faster to finish.
+**The self-driving analogy:** Vibe coding is like autonomous driving — the scope determines the risk.
+
+- **Parking lot (small feature):** Auto-parking in a lot is fully autonomous. The task is simple, the space is bounded, the worst case is a scratched bumper. You can hand full control to the AI and walk away. This is vibe coding a small, isolated feature — let the agent do its thing.
+- **Highway road trip (full project):** Self-driving on a long highway trip *can* work, but the driver must stay fully alert, hands ready to grab the wheel, because a single mistake at high speed can be catastrophic. This is asking an AI to generate a complete architecture — you *must* review every step, because one wrong turn compounds into a disaster.
+- **But human attention is finite.** No driver can stay 100% vigilant for a 10-hour drive. No engineer can carefully review every line of a 50-file scaffold. Attention fades, reviews get cursory, and the mistakes slip through exactly when they're most dangerous.
+
+That's why you build small: not because the AI can't generate big things, but because **you can't review big things**. Small tasks keep the blast radius within your attention span.
 
 ---
 
